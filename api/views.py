@@ -1,25 +1,49 @@
 from django.shortcuts import render
-import io
-from rest_framework.parsers import JSONParser
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from .models import Student
 from .serializers import StudentSerializer
-from rest_framework.renderers import JSONRenderer
-from django.http import HttpResponse
 
-def student_api(request):
+
+@api_view(['GET','POST','PUT','PATCH','DELETE'])
+def student_api(request,pk=None):
     if request.method=='GET':
-        json_data=request.body
-        stream=io.BytesIO(json_data)
-        pythondata=JSONParser().parse(stream)
-        id=pythondata.get('id',None)
+        id=pk
         if id is not None:
             stu=Student.objects.get(id=id)
             serializer=StudentSerializer(stu)
-            json_data=JSONRenderer().render(serializer.data)
-            return HttpResponse(json_data,content_type='application/json')
+            return Response(serializer.data)
         stu=Student.objects.all()
         serializer=StudentSerializer(stu,many=True)
-        json_data=JSONRenderer().render(serializer.data)
-        return HttpResponse(json_data,content_type='application/json')
-
-# Create your views here.
+        return Response(serializer.data)
+    
+    if request.method=='POST':
+        serializer=StudentSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'msg':'Data Created'})
+        return Response(serializer.errors)
+    
+    if request.method=='PUT':
+        id=pk
+        stu=Student.objects.get(pk=id)
+        serializer=StudentSerializer(stu,data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'msg':'Complete Data Updated'})
+        return Response(serializer.errors)
+    
+    if request.method=='PATCH':
+        id=pk
+        stu=Student.objects.get(pk=id)
+        serializer=StudentSerializer(stu,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'msg':'Partial Data Updated'})
+        return Response(serializer.errors)
+    
+    if request.method=='DELETE':
+        id=pk
+        stu=Student.objects.get(pk=id)
+        stu.delete()
+        return Response({'msg':'Data Deleted'})
